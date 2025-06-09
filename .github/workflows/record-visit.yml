@@ -1,0 +1,38 @@
+name: Record Visit
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Check every 5 minutes
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  record-visit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          
+      - name: Process pending visits
+        run: |
+          # Get current count
+          current_total=$(jq '.total' data/hits.json)
+          pending_visits=1  # We'll increment by 1 each time
+          new_total=$((current_total + pending_visits))
+          current_date=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Update hits.json with new total
+          jq --arg date "$current_date" \
+             --argjson total "$new_total" \
+             '.total = $total | .last_updated = $date' \
+             data/hits.json > data/hits.json.tmp && mv data/hits.json.tmp data/hits.json
+             
+          # Configure git
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          
+          # Commit and push if there are changes
+          git add data/hits.json
+          git diff --staged --quiet || (git commit -m "Update visit count to $new_total" && git push)

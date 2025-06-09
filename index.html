@@ -270,6 +270,17 @@
                 return response.json();
             })
             .then(items => {
+                // Load visit counter
+                fetch('data/hits.json')
+                    .then(response => response.json())
+                    .then(hits => {
+                        const countElements = document.getElementsByClassName('visitor-count');
+                        for (let el of countElements) {
+                            el.textContent = hits.total;
+                        }
+                    })
+                    .catch(error => console.error('Error loading visitor count:', error));
+
                 const grid = document.querySelector('.grid');
                 items.forEach(item => {
                     const gridItem = document.createElement('div');
